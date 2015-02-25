@@ -11,7 +11,7 @@ Yuhuang Hu
 Advanced Robotic Lab  
 Department of Artificial Intelligence  
 Faculty of Computer Science & IT  
-University of Malaya
+University of Malaya  
 Email:duguyue100@gmail.com
 
 
