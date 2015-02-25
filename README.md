@@ -4,7 +4,11 @@ This repo aims to provide a python implementation of H. Jaeger's conceptor netwo
 
 ## Updates
 
++ Structure sketch
+
 ## Notes
+
++ Based on my reading so far, there is really no training for the network. The readout weights and target weights are calculated analytically.
 
 ## Contacts
 Yuhuang Hu  

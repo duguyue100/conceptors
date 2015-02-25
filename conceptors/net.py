@@ -95,4 +95,9 @@ class ConceptorNetwork:
         x_old_collector[:, n-self.washout_length]=x_old;
         p_collector[0, n-self.washout_length]=u;
     
+  
+  def train(self):
+    
+    pass
+  
     
