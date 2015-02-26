@@ -5,9 +5,6 @@
 
 import numpy as np;
 import matplotlib.pyplot as pplot;
-from conceptors.util import gen_internal_weights;
-from conceptors.util import init_weights;
-from conceptors.util import nrmse;
 from conceptors.net import ConceptorNetwork;
 
 net=ConceptorNetwork(200);
