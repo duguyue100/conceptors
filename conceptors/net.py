@@ -7,6 +7,7 @@ Created on Feb 25, 2015
 
 import numpy as np;
 import conceptors.util;
+import numpy.matlib;
 
 class ConceptorNetwork:
   """
@@ -15,12 +16,13 @@ class ConceptorNetwork:
   
   def __init__(self,
                num_neuron,
-               num_pattern,
                sr=1.5,
                in_scale=1.5,
                bias_scale=0.2,
                washout_length=500,
-               learn_length=1000):
+               learn_length=1000,
+               signal_plot_length=20,
+               tychnonv_alpha_readout=0.01):
     
     """
     Initialize conceptor network
@@ -29,19 +31,21 @@ class ConceptorNetwork:
     @param sr: spectral radius
     @param in_scale: scaling of pattern feeding weights
     @param bias_scale: size of bias 
-    @param num_pattern: number of pattern
     @param washout_length: length of wash-out iteration
     @param learn_length: length of learning iteration
+    @param signal_plot_length: length of plot length
     """
     
     # document parameters
     self.num_neuron=num_neuron;
-    self.num_pattern=num_pattern;
+    self.num_pattern=0;
     self.sr=sr;
     self.in_scale=in_scale;
     self.bias_scale=bias_scale;
     self.learn_length=learn_length;
     self.washout_length=washout_length;
+    self.signal_plot_length=signal_plot_length;
+    self.tychnonv_alpha_readout=tychnonv_alpha_readout;
     
     # initialize weights and parameters
     W_star, W_in, W_bias=conceptors.util.init_weights(num_neuron,
@@ -52,11 +56,13 @@ class ConceptorNetwork:
     self.W_star=W_star;
     self.W_in=W_in;
     self.W_bias=W_bias;
+    self.W_out=np.asarray([]);
+    self.W=np.asarray([]);
                                                                      
-    self.all_train_args=np.zeros(num_neuron, num_pattern*learn_length);
-    self.all_train_old_args=np.zeros(num_neuron, num_pattern*learn_length);
-    self.all_train_targs=np.zeros(num_neuron, num_pattern*learn_length);
-    self.all_train_outs=np.zeros(1,num_pattern*learn_length);
+    self.all_train_args=np.asarray([]);
+    self.all_train_old_args=np.asarray([]);
+    self.all_train_targs=np.asarray([]);
+    self.all_train_outs=np.asarray([]);
     
     # initialize collectors
     
@@ -70,7 +76,9 @@ class ConceptorNetwork:
     self.train_xpl=[];
     self.train_ppl=[];
     
-    self.startXs=np.zeros(num_neuron, num_pattern);
+    self.startXs=np.asarray([]);
+    
+    self.Cs=[]; self.Cs.append([]); self.Cs.append([]); self.Cs.append([]); self.Cs.append([]);
     
     
   def train_pattern(self,
@@ -95,9 +103,117 @@ class ConceptorNetwork:
         x_old_collector[:, n-self.washout_length]=x_old;
         p_collector[0, n-self.washout_length]=u;
     
-  
-  def train(self):
+    x_collector_centered=x_collector-numpy.matlib.repmat(np.mean(x_collector, 1), self.learn_length, 1).T;
+    # document centered collectors and collectors
+    self.x_collectors_centered.append(x_collector_centered);
+    self.x_collectors.append(x_collector);
     
-    pass
+    # document eigen vectors and eigen values 
+    R=x_collector.dot(x_collector.T)/self.learn_length;
+    Ux, Sx, _=numpy.linalg.svd(R);
+    self.sr_collectors.append(Sx);
+    self.ur_collectors.append(Ux);
+    self.pattern_rs.append(R);
+    
+    if not self.startXs.size:
+      self.startXs=x;
+      self.startXs=self.startXs[None].T;
+    else:
+      self.startXs=np.hstack((self.startXs, x));
+    
+    self.train_xpl.append(x_collector[:, 0:self.signal_plot_length]);
+    self.train_ppl.append(p_collector[0, 0:self.signal_plot_length]);
+    self.pattern_collectors.append(p_collector);
+    
+    # document training data
+    if not self.all_train_args.size:
+      self.all_train_args=x_collector;
+    else:
+      self.all_train_args=np.hstack((self.all_train_args, x_collector));
+      
+    if not self.all_train_old_args:
+      self.all_train_old_args=x_old_collector;
+    else:
+      self.all_train_old_args=np.hstack((self.all_train_old_args, x_old_collector));
+      
+    if not self.all_train_outs.size:
+      self.all_train_outs=p_collector;
+    else:
+      self.all_train_outs=np.hstack((self.all_train_outs, p_collector));
+      
+    if not self.all_train_targs.size:
+      self.all_train_targs=self.W_in.dot(p_collector);
+    else:
+      self.all_train_targs=np.hstack((self.all_train_targs, self.W_in.dot(p_collector)));
+      
+    self.num_pattern+=1;
   
+  def train(self,
+            patterns):
+    """
+    Training procedure for conceptor network
+    
+    @param patterns: pattern list, the patterns are in column wise
+    """
+    
+    for i in xrange(patterns.shape[1]):
+      self.train_pattern(patterns[:, i]);
+      
+    self.compute_readout(self.tychnonv_alpha_readout);
+    self.compute_W(self.tychnonv_alpha_readout);
+  
+  def compute_readout(self,
+                      tychnonv_alpha_readout=0.01):
+    """
+    Compute output weight
+    
+    """
+    
+    self.W_out=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_args).dot(self.all_train_outs.T).T;
+    
+  def compute_W(self,
+                tychnonv_alpha_readout=0.01):
+    """
+    Compute W
+    """
+    
+    W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, self.num_pattern*self.learn_length, 1).T;
+    self.W=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(W_targets.T).T;
+    
+  def recall(self,
+             x,
+             test_length=200):
+    """
+    Recall the pattern based on trained parameters
+    
+    @param x: patterns restored in self.startXs
+    @param test_length: length of recall
+    """
+    
+    messy_out_pl=np.zeros(1, test_length);
+    
+    for n in xrange(test_length):
+      x=np.tanh(self.W.dot(x)+self.W_bias);
+      y=self.W_out.dot(x);
+      messy_out_pl[n]=y;
+      
+    return y;
+    
+  def compute_projector(self,
+                        R,
+                        alpha=10):  
+    """
+    Compute projector (conceptor)
+    
+    """
+    
+    U,S,_=np.linalg.svd(R);
+    S_new=(S.dot(np.linalg.inv(S+alpha**(-2).dot(np.eye(self.num_neuron)))))
+    
+    C=U.dot(S_new).dot(U.T);
+    
+    self.Cs[0].append(C);
+    self.Cs[1].append(U);
+    self.Cs[2].append(np.diag(S_new));
+    self.Cs[3].append(S);
     

@@ -54,5 +54,25 @@ def init_weights(num_neuron,
   W_bias=np.random.rand(num_neuron,1)*bias_scale;
     
   return W_star, W_in, W_bias;
+
+def nrmse(output,
+          target):
+    """
+    Compute normalized root mean square error.
+    
+    @param output: output data in D x time dimension
+    @param target: target data in D x time dimension
+    
+    @return NRMSE: normalized root mean square error. 
+    """
+    
+    if output.ndim==1 and target.ndim==1:
+      output=output[None].T;
+      target=target[None].T;
+    
+    combined_var=0.5*(np.var(a=target, axis=1, ddof=1)+np.var(a=output, axis=1, ddof=1));    
+    error_signal=(output-target);
+    
+    return np.sqrt(np.mean(error_signal**2, 1)/combined_var);
   
   
