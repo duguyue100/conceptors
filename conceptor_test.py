@@ -4,16 +4,28 @@
 """
 
 import numpy as np;
+import matplotlib.pyplot as pplot;
 from conceptors.util import gen_internal_weights;
 from conceptors.util import init_weights;
 from conceptors.util import nrmse;
+from conceptors.net import ConceptorNetwork;
 
-#w=gen_internal_weights(5, 0.1);
+net=ConceptorNetwork(200);
 
-#print w;
+p1=np.asarray(xrange(2000));
+p1=np.sin(2*np.pi*p1/10);
+p2=np.asarray(xrange(2000));
+p2=np.sin(2*np.pi*p2/15);
+p=np.hstack((p1[None].T, p2[None].T));
 
-wstar, win, wbias=init_weights(30, 1.5, 1.5, 0.2);
+net.train(p);
+y1=net.recall(net.startXs[:,0]);
+print y1.shape
 
-#print wstar, win, wbias;
+y2=net.recall(net.startXs[:,1]);
+print y2.shape
 
-print nrmse(np.asarray([[1,2,3,4]]), np.asarray([[4,5,6,7]]))
+pplot.figure(1);
+pplot.plot(xrange(200), p[0:200,1]);
+pplot.plot(xrange(200), y2.T);
+pplot.show();

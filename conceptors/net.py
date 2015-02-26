@@ -89,18 +89,18 @@ class ConceptorNetwork:
     @param pattern: input pattern
     """
     
-    x_collector=np.zeros(self.num_neuron, self.learn_length);
-    x_old_collector=np.zeros(self.num_neuron, self.learn_length);
-    p_collector=np.zeros(1, self.learn_length);
-    x=np.zeros(self.num_neuron, 1);
+    x_collector=np.zeros((self.num_neuron, self.learn_length));
+    x_old_collector=np.zeros((self.num_neuron, self.learn_length));
+    p_collector=np.zeros((1, self.learn_length));
+    x=np.zeros((self.num_neuron, 1));
     
     for n in xrange(self.washout_length+self.learn_length):
       u=pattern[n];
       x_old=x;
-      x=np.tanh(self.W_star.dot(x)+self.W_in.dot(x)+self.W_bias);
+      x=np.tanh(self.W_star.dot(x)+self.W_in*u+self.W_bias);
       if n>self.washout_length-1:
-        x_collector[:, n-self.washout_length]=x;
-        x_old_collector[:, n-self.washout_length]=x_old;
+        x_collector[:, n-self.washout_length]=x[:,0];
+        x_old_collector[:, n-self.washout_length]=x_old[:,0];
         p_collector[0, n-self.washout_length]=u;
     
     x_collector_centered=x_collector-numpy.matlib.repmat(np.mean(x_collector, 1), self.learn_length, 1).T;
@@ -116,7 +116,7 @@ class ConceptorNetwork:
     self.pattern_rs.append(R);
     
     if not self.startXs.size:
-      self.startXs=x;
+      self.startXs=x[:,0];
       self.startXs=self.startXs[None].T;
     else:
       self.startXs=np.hstack((self.startXs, x));
@@ -131,7 +131,7 @@ class ConceptorNetwork:
     else:
       self.all_train_args=np.hstack((self.all_train_args, x_collector));
       
-    if not self.all_train_old_args:
+    if not self.all_train_old_args.size:
       self.all_train_old_args=x_old_collector;
     else:
       self.all_train_old_args=np.hstack((self.all_train_old_args, x_old_collector));
@@ -155,9 +155,11 @@ class ConceptorNetwork:
     
     @param patterns: pattern list, the patterns are in column wise
     """
-    
-    for i in xrange(patterns.shape[1]):
-      self.train_pattern(patterns[:, i]);
+    if patterns.ndim==1:
+      self.train_pattern(patterns);
+    else:
+      for i in xrange(patterns.shape[1]):
+        self.train_pattern(patterns[:, i]);
       
     self.compute_readout(self.tychnonv_alpha_readout);
     self.compute_W(self.tychnonv_alpha_readout);
@@ -176,8 +178,7 @@ class ConceptorNetwork:
     """
     Compute W
     """
-    
-    W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, self.num_pattern*self.learn_length, 1).T;
+    W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, 1, self.num_pattern*self.learn_length);
     self.W=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(W_targets.T).T;
     
   def recall(self,
@@ -190,14 +191,15 @@ class ConceptorNetwork:
     @param test_length: length of recall
     """
     
-    messy_out_pl=np.zeros(1, test_length);
+    messy_out_pl=np.zeros((1, test_length));
+    x=x[None].T;
     
     for n in xrange(test_length):
       x=np.tanh(self.W.dot(x)+self.W_bias);
       y=self.W_out.dot(x);
-      messy_out_pl[n]=y;
+      messy_out_pl[:,n]=y[0,0];
       
-    return y;
+    return messy_out_pl;
     
   def compute_projector(self,
                         R,
