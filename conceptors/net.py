@@ -57,6 +57,7 @@ class ConceptorNetwork:
     self.W_in=W_in;
     self.W_bias=W_bias;
     self.W_out=np.asarray([]);
+    self.W_targets=np.asarray([]);
     self.W=np.asarray([]);
                                                                      
     self.all_train_args=np.asarray([]);
@@ -114,6 +115,8 @@ class ConceptorNetwork:
     self.sr_collectors.append(Sx);
     self.ur_collectors.append(Ux);
     self.pattern_rs.append(R);
+    
+    self.compute_projector(R);
     
     if not self.startXs.size:
       self.startXs=x[:,0];
@@ -178,14 +181,14 @@ class ConceptorNetwork:
     """
     Compute W
     """
-    W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, 1, self.num_pattern*self.learn_length);
-    self.W=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(W_targets.T).T;
+    self.W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, 1, self.num_pattern*self.learn_length);
+    self.W=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(self.W_targets.T).T;
     
-  def recall(self,
-             x,
-             test_length=200):
+  def messy_recall(self,
+                   x,
+                   test_length=200):
     """
-    Recall the pattern based on trained parameters
+    Run loaded reservior to observe a messy output.
     
     @param x: patterns restored in self.startXs
     @param test_length: length of recall
@@ -210,8 +213,8 @@ class ConceptorNetwork:
     """
     
     U,S,_=np.linalg.svd(R);
-    S_new=(S.dot(np.linalg.inv(S+alpha**(-2).dot(np.eye(self.num_neuron)))))
-    
+    S_new=(np.diag(S).dot(np.linalg.inv(np.diag(S)+alpha**(-2)*np.eye(self.num_neuron))))
+        
     C=U.dot(S_new).dot(U.T);
     
     self.Cs[0].append(C);

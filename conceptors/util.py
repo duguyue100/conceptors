@@ -73,6 +73,6 @@ def nrmse(output,
     combined_var=0.5*(np.var(a=target, axis=1, ddof=1)+np.var(a=output, axis=1, ddof=1));    
     error_signal=(output-target);
     
-    return np.sqrt(np.mean(error_signal**2, 1)/combined_var);
+    return np.mean(np.sqrt(np.mean(error_signal**2, 1)/combined_var));
   
   
