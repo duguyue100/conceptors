@@ -53,7 +53,9 @@ for p in xrange(net.num_pattern):
     x_ctestpl[:,n,p]=x[0:5,0];
     p_ctestpl[:,n,p]=net.W_out.dot(x);
     
-
+pplot.figure(2);
+pplot.plot(xrange(c_test_length), p_ctestpl[0,:,1]);
+pplot.show()
 
 
 
