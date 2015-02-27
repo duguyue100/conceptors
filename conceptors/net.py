@@ -12,6 +12,10 @@ import numpy.matlib;
 class ConceptorNetwork:
   """
   A implementaion of conceptor network
+  
+  This class is designed by following:
+  Section 3.2 Driving a Reservorir with Different Patterns in
+  Controlling Recurrent Neural Networks by Conceptors
   """
   
   def __init__(self,
@@ -22,7 +26,7 @@ class ConceptorNetwork:
                washout_length=500,
                learn_length=1000,
                signal_plot_length=20,
-               tychnonv_alpha_readout=0.01):
+               tychonov_alpha_readout=0.01):
     
     """
     Initialize conceptor network
@@ -34,6 +38,7 @@ class ConceptorNetwork:
     @param washout_length: length of wash-out iteration
     @param learn_length: length of learning iteration
     @param signal_plot_length: length of plot length
+    @param tychnonv_alpha_readout: Tychonov regularization parameter
     """
     
     # document parameters
@@ -45,7 +50,7 @@ class ConceptorNetwork:
     self.learn_length=learn_length;
     self.washout_length=washout_length;
     self.signal_plot_length=signal_plot_length;
-    self.tychnonv_alpha_readout=tychnonv_alpha_readout;
+    self.tychonov_alpha_readout=tychonov_alpha_readout;
     
     # initialize weights and parameters
     W_star, W_in, W_bias=conceptors.util.init_weights(num_neuron,
@@ -163,26 +168,36 @@ class ConceptorNetwork:
     else:
       for i in xrange(patterns.shape[1]):
         self.train_pattern(patterns[:, i]);
-      
-    self.compute_readout(self.tychnonv_alpha_readout);
-    self.compute_W(self.tychnonv_alpha_readout);
+    
+    self.compute_weights(self.tychonov_alpha_readout);
+    
+  def compute_weights(self,
+                      tychonov_alpha_readout=0.01):
+    """
+    Compute readout weights, target weights, and reservoir weights
+    """
+    self.compute_readout(self.tychonov_alpha_readout);
+    self.compute_W(self.tychonov_alpha_readout);
   
   def compute_readout(self,
-                      tychnonv_alpha_readout=0.01):
+                      tychonov_alpha_readout=0.01):
     """
-    Compute output weight
+    Compute readout weight
     
+    @param tychnonv_alpha_readout: Tychonov regularization parameter
     """
     
-    self.W_out=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_args).dot(self.all_train_outs.T).T;
+    self.W_out=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychonov_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_args).dot(self.all_train_outs.T).T;
     
   def compute_W(self,
-                tychnonv_alpha_readout=0.01):
+                tychonov_alpha_readout=0.01):
     """
-    Compute W
+    Compute reserior weights and target weights
+    
+    @param tychonov_alpha_readout: Tychonov regularization parameter
     """
     self.W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, 1, self.num_pattern*self.learn_length);
-    self.W=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychnonv_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(self.W_targets.T).T;
+    self.W=np.linalg.inv(self.all_train_old_args.dot(self.all_train_old_args.T)+tychonov_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(self.W_targets.T).T;
     
   def messy_recall(self,
                    x,
@@ -210,6 +225,8 @@ class ConceptorNetwork:
     """
     Compute projector (conceptor)
     
+    @param R: state correlation matrix
+    @param alpha: a designed parameter: aperture 
     """
     
     U,S,_=np.linalg.svd(R);
@@ -221,4 +238,50 @@ class ConceptorNetwork:
     self.Cs[1].append(U);
     self.Cs[2].append(np.diag(S_new));
     self.Cs[3].append(S);
+    
+    
+class Autoconceptor:
+  """
+  A implementation of Autoconceptor
+  
+  This class is designed by following:
+  Section 3.13 Autoconceptors in
+  Controlling Recurrent Neural Networks by Conceptors
+  """
+  
+  def __init__(self,
+               num_neuron):
+    """
+    comments
+    """
+    
+    
+    pass
+    
+    
+    
+class RandomFeatureConceptor:
+  """
+  An implementation of Random Feature Conceptor
+  
+  This class is designed by following:
+  3.14 Toward Biologically Plausible Neural Circuits: Random Feature Conceptors in
+  Controlling Recurrent Neural Networks by Conceptors
+  """
+  
+  def __init__(self,
+               num_neuron):
+    """
+    Write things
+    """
+  
+    pass
+
+    
+    
+    
+    
+    
+    
+    
     
