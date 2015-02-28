@@ -19,6 +19,7 @@ class ConceptorNetwork:
   """
   
   def __init__(self,
+               num_in,
                num_neuron,
                sr=1.5,
                in_scale=1.5,
@@ -26,7 +27,8 @@ class ConceptorNetwork:
                washout_length=500,
                learn_length=1000,
                signal_plot_length=20,
-               tychonov_alpha_readout=0.01):
+               tychonov_alpha_readout=0.01,
+               tychonov_alpha_readout_w=0.0001):
     
     """
     Initialize conceptor network
@@ -42,6 +44,7 @@ class ConceptorNetwork:
     """
     
     # document parameters
+    self.num_in=num_in;
     self.num_neuron=num_neuron;
     self.num_pattern=0;
     self.sr=sr;
@@ -51,9 +54,11 @@ class ConceptorNetwork:
     self.washout_length=washout_length;
     self.signal_plot_length=signal_plot_length;
     self.tychonov_alpha_readout=tychonov_alpha_readout;
+    self.tychonov_alpha_readout_w=tychonov_alpha_readout_w;
     
     # initialize weights and parameters
-    W_star, W_in, W_bias=conceptors.util.init_weights(num_neuron,
+    W_star, W_in, W_bias=conceptors.util.init_weights(num_in,
+                                                      num_neuron,
                                                       sr,
                                                       in_scale,
                                                       bias_scale);
@@ -97,17 +102,17 @@ class ConceptorNetwork:
     
     x_collector=np.zeros((self.num_neuron, self.learn_length));
     x_old_collector=np.zeros((self.num_neuron, self.learn_length));
-    p_collector=np.zeros((1, self.learn_length));
+    p_collector=np.zeros((self.num_in, self.learn_length));
     x=np.zeros((self.num_neuron, 1));
     
     for n in xrange(self.washout_length+self.learn_length):
-      u=pattern[n];
+      u=pattern[:,n];
       x_old=x;
       x=np.tanh(self.W_star.dot(x)+self.W_in*u+self.W_bias);
       if n>self.washout_length-1:
         x_collector[:, n-self.washout_length]=x[:,0];
         x_old_collector[:, n-self.washout_length]=x_old[:,0];
-        p_collector[0, n-self.washout_length]=u;
+        p_collector[:, n-self.washout_length]=u;
     
     x_collector_centered=x_collector-numpy.matlib.repmat(np.mean(x_collector, 1), self.learn_length, 1).T;
     # document centered collectors and collectors
@@ -130,7 +135,7 @@ class ConceptorNetwork:
       self.startXs=np.hstack((self.startXs, x));
     
     self.train_xpl.append(x_collector[:, 0:self.signal_plot_length]);
-    self.train_ppl.append(p_collector[0, 0:self.signal_plot_length]);
+    self.train_ppl.append(p_collector[:, 0:self.signal_plot_length]);
     self.pattern_collectors.append(p_collector);
     
     # document training data
@@ -161,23 +166,28 @@ class ConceptorNetwork:
     """
     Training procedure for conceptor network
     
-    @param patterns: pattern list, the patterns are in column wise
+    @param patterns: pattern list, each pattern is a element in the list
     """
-    if patterns.ndim==1:
-      self.train_pattern(patterns);
-    else:
-      for i in xrange(patterns.shape[1]):
-        self.train_pattern(patterns[:, i]);
+    for i in xrange(len(patterns)):
+      self.train_pattern(patterns[i]);
     
-    self.compute_weights(self.tychonov_alpha_readout);
+    #if patterns.ndim==1:
+    #  self.train_pattern(patterns);
+    #else:
+    #  for i in xrange(patterns.shape[1]):
+    #    self.train_pattern(patterns[:, i]);
+    
+    self.compute_weights(self.tychonov_alpha_readout,
+                         self.tychonov_alpha_readout_w);
     
   def compute_weights(self,
-                      tychonov_alpha_readout=0.01):
+                      tychonov_alpha_readout=0.01,
+                      tychonov_alpha_readout_w=0.0001):
     """
     Compute readout weights, target weights, and reservoir weights
     """
     self.compute_readout(self.tychonov_alpha_readout);
-    self.compute_W(self.tychonov_alpha_readout);
+    self.compute_W(self.tychonov_alpha_readout_w);
   
   def compute_readout(self,
                       tychonov_alpha_readout=0.01):
@@ -190,14 +200,14 @@ class ConceptorNetwork:
     self.W_out=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+tychonov_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_args).dot(self.all_train_outs.T).T;
     
   def compute_W(self,
-                tychonov_alpha_readout=0.01):
+                tychonov_alpha_readout_w=0.0001):
     """
     Compute reserior weights and target weights
     
     @param tychonov_alpha_readout: Tychonov regularization parameter
     """
     self.W_targets=np.arctanh(self.all_train_args)-numpy.matlib.repmat(self.W_bias, 1, self.num_pattern*self.learn_length);
-    self.W=np.linalg.inv(self.all_train_old_args.dot(self.all_train_old_args.T)+tychonov_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(self.W_targets.T).T;
+    self.W=np.linalg.inv(self.all_train_old_args.dot(self.all_train_old_args.T)+tychonov_alpha_readout_w*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(self.W_targets.T).T;
     
   def messy_recall(self,
                    x,
@@ -209,13 +219,13 @@ class ConceptorNetwork:
     @param test_length: length of recall
     """
     
-    messy_out_pl=np.zeros((1, test_length));
+    messy_out_pl=np.zeros((self.num_in, test_length));
     x=x[None].T;
     
     for n in xrange(test_length):
       x=np.tanh(self.W.dot(x)+self.W_bias);
       y=self.W_out.dot(x);
-      messy_out_pl[:,n]=y[0,0];
+      messy_out_pl[:,n]=y[:,0];
       
     return messy_out_pl;
     
