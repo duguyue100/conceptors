@@ -450,6 +450,97 @@ class Autoconceptor:
     
     self.C=logic.OR(self.C, C_ap);
     
+  def adapt_conceptor(self,
+                      C,
+                      x,
+                      lambda_adapt):
+    """
+    Adapt conceptor matrix
+    
+    @param C: current concepotr matrix
+    @param x: current activiations
+    @param lambda_adapt: adapt parameter
+    
+    @return next state of conceptor matrix
+    """
+    
+    return lambda_adapt*((x-C.dot(x)).dot(x.T)-self.alpha**-2*C);
+    
+  def cue_conceptor(self,
+                    pattern,
+                    init_washout=100,
+                    cue_length=30,
+                    lambda_adapt_cue=0.01):
+    """
+    Cue conceptor in following three stages:
+    1. Initial washout
+    2. Cueing
+    
+    @param pattern: input pattern
+    @param init_washout: initial washout length
+    @param cue_length: cueing length;
+    """
+    
+    x=np.zeros((self.num_neuron,1));
+    for n in xrange(init_washout):
+      u=pattern[:,n][None].T;
+      x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
+      
+    C=np.zeros((self.num_neuron, self.num_neuron));
+    
+    for n in xrange(cue_length):
+      u=pattern[:,n+init_washout][None].T;
+      x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
+      C+=self.adapt_conceptor(C, x, lambda_adapt_cue);
+    
+    return C;
+  
+  def recall_conceptor(self,
+                       C,
+                       x,
+                       adaptation_length=10000,
+                       lambda_adapt_recall=0.01):
+    """
+    Autonomous recall pattern based on conceptor
+    
+    @param C: current cue conceptor matrix
+    @param x: current activation state
+    @param lambda_adapt_recall: recall apdaptation parameter
+    
+    @return Conceptor matrix from recall
+    """
+    
+    for n in xrange(adaptation_length):
+      x=C.dot(np.tanh(self.W.dot(x)+self.D.dot(x)+self.bias));
+      C+=self.adapt_conceptor(C, x, lambda_adapt_recall);
+      
+    return C;
+  
+  def offline_recall(self,
+                     C,
+                     x):
+    """
+    Activation offline recall using conceptor C and an activation state x
+    
+    @param C: conceptor matrix
+    @param x: activation state
+    """
+    
+    return C.dot(np.tanh(self.W.dot(x)+self.D.dot(x)+self.bias));
+  
+  def offline_pattern_recall(self,
+                             C,
+                             x):
+    """
+    Pattern offline recall using conceptor C and an activation state x
+    
+    @param C: conceptor matrix
+    @param x: activation state 
+    """
+    
+    x=self.offline_pattern_recall(C, x);
+    return self.W_out.dot(x);
+    
 class RandomFeatureConceptor:
   """
   An implementation of Random Feature Conceptor

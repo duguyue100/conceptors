@@ -19,7 +19,7 @@ These packages can be found and installed by using Anaconda 2.1.0.
 + Structure sketch [DONE]
 + First working version [2015-02-26]
 + Refined version of conceptor network [2015-02-27]
-+ Autoconceptors [UNDONE 2015-03-05]
++ Autoconceptors [UNTESTED 2015-03-05]
 + Random Feature Conceptors [TODO]
 + Conceptor visualization [2015-02-27] [A test is added in the code, not in a function, visualization seems fine]
 + Conceptor I/O: saving and loding in file [TODO]
