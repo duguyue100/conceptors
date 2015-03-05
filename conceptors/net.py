@@ -174,12 +174,6 @@ class ConceptorNetwork:
     for i in xrange(len(patterns)):
       self.train_pattern(patterns[i]);
     
-    #if patterns.ndim==1:
-    #  self.train_pattern(patterns);
-    #else:
-    #  for i in xrange(patterns.shape[1]):
-    #    self.train_pattern(patterns[:, i]);
-    
     self.compute_weights(self.tychonov_alpha_readout,
                          self.tychonov_alpha_readout_w);
     
@@ -270,10 +264,11 @@ class Autoconceptor:
                bias_scale=0.5,
                washout_length=100,
                learn_length=500,
-               signal_plot_length=20,
+               measure_template_length=20,
+               signal_plot_length=10,
                alpha=100,
-               tychonov_alpha_readout=0.01,
-               tychonov_alpha_readout_w=0.0001):
+               tychonov_alpha_d=0.001,
+               tychonov_alpha_w_out=0.0001):
     """
     Initialize Autoconceptor Network
     
@@ -296,10 +291,11 @@ class Autoconceptor:
     self.bias_scale=bias_scale;
     self.learn_length=learn_length;
     self.washout_length=washout_length;
+    self.measure_template_length=measure_template_length;
     self.signal_plot_length=signal_plot_length;
     self.alpha=alpha;
-    self.tychonov_alpha_readout=tychonov_alpha_readout;
-    self.tychonov_alpha_readout_w=tychonov_alpha_readout_w;
+    self.tychonov_alpha_d=tychonov_alpha_d;
+    self.tychonov_alpha_w_out=tychonov_alpha_w_out;
     
     # initialize weights
     W, W_in, bias=conceptors.util.init_weights(num_in,
@@ -310,10 +306,13 @@ class Autoconceptor:
                                                       
     self.W=W;
     self.W_in=W_in;
+    self.W_out=np.asarray([]);
     self.bias=bias;
     
     self.p_templates=np.asarray([]);
     self.all_train_args=np.asarray([]);
+    self.all_train_old_args=np.asarray([]);
+    self.all_train_dt_args=np.asarray([]);
     self.all_train_yt_args=np.asarray([]);
     
     # input simulation matrix
@@ -323,11 +322,13 @@ class Autoconceptor:
     self.C=np.zeros((self.num_neuron, self.num_neuron));
     
   def load_pattern(self,
-                   pattern):
+                   pattern,
+                   incremental=True):
     """
     Load single pattern
     
     @param pattern: input pattern in (N x time) size, each column is a sample
+    @param incremental: if enable incremental learning
     """
     
     p_template=np.zeros((self.learn_length, self.num_in));
@@ -345,10 +346,78 @@ class Autoconceptor:
       x_old=x;
       x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
       x_cue[:,n]=x[:,0];
-      x_old_collector[:,n]=x_old;
-      p_template[n,:]=u;
+      x_old_collector[:,n]=x_old[:,0];
+      p_template[n,:]=u[:,0].T;
       
+    if not self.p_templates.size:
+      self.p_templates=p_template[-1-self.measure_template_length+1:,:];
+    else:
+      self.p_templates=np.hstack((self.p_templates, p_template[-1-self.measure_template_length+1:,:]));
+      
+    if not self.all_train_args.size:
+      self.all_train_args=x_cue;
+    else:
+      self.all_train_args=np.hstack((self.all_train_args, x_cue));
+      
+    if not self.all_train_old_args.size:
+      self.all_train_old_args=x_old_collector;
+    else:
+      self.all_train_old_args=np.hstack((self.all_train_old_args, x_old_collector));
+      
+    if not self.all_train_dt_args.size:
+      self.all_train_dt_args=self.W_in.dot(p_template.T);
+    else:
+      self.all_train_dt_args=np.hstack((self.all_train_dt_args, self.W_in.dot(p_template.T)));
+      
+    if not self.all_train_yt_args.size:
+      self.all_train_yt_args=p_template;
+    else:
+      self.all_train_yt_args=np.hstack((self.all_train_yt_args, p_template));
+      
+    if incremental==True:
+      self.update_input_simulation_matrix(p_template, x_old_collector);
+      self.update_conceptor(x_old_collector);
+      
+  def load(self,
+           patterns,
+           load_mode="incremental"):
+    """
+    This function loads patterns
     
+    @param patterns: list of patterns that are loaded.
+    @param load_mode: pattern loading mode ("incermental"/"complete")
+    """
+    
+    if load_mode=="incremental":
+      for i in xrange(len(patterns)):
+        self.load_pattern(patterns[i]);
+    elif load_mode=="complete":
+      for i in xrange(len(patterns)):
+        self.load_pattern(patterns[i], False);
+      self.learn_input_simulation_matrix(self.tychonov_alpha_d);
+    
+    self.learn_output_weights(self.tychonov_alpha_w_out);
+      
+      
+  def learn_input_simulation_matrix(self,
+                                    tychonov_alpha_d=0.001):
+    """
+    Direct learn input simulation matrix D
+    
+    @param tychonov_alpha_d: Tychonov regularization parameter 
+    """
+    
+    self.D=np.linalg.inv(self.all_train_old_args.dot(self.all_train_old_args.T)+tychonov_alpha_d*np.eye(self.num_neuron)).dot(self.all_train_old_args).dot(self.all_train_dt_args.T).T;
+    
+  def learn_output_weights(self,
+                           tychonov_alpha_w_out=0.01):
+    """
+    Compute outpout weights
+    
+    @param tychonov_alpha_w_out: Tychonov regularization parameter
+    """
+    
+    self.W_out=np.linalg.inv(self.all_train_args.dot(self.all_train_args.T)+self.tychonov_alpha_w_out*np.eye(self.num_neuron)).dot(self.all_train_args).dot(self.all_train_yt_args.T).T;
     
   def update_input_simulation_matrix(self,
                                      p_template,
