@@ -19,12 +19,14 @@ These packages can be found and installed by using Anaconda 2.1.0.
 + Structure sketch [DONE]
 + First working version [2015-02-26]
 + Refined version of conceptor network [2015-02-27]
-+ Autoconceptors [TODO]
++ Autoconceptors [UNDONE 2015-03-05]
 + Random Feature Conceptors [TODO]
 + Conceptor visualization [2015-02-27] [A test is added in the code, not in a function, visualization seems fine]
 + Conceptor I/O: saving and loding in file [TODO]
 + Now the naive conceptor can accept multidimensional input instead of 1-d input [2014-02-28]
 + Japanese Vowels recognition test [TODO]
++ Conceptors network fixed [2015-03-05]
++ Update logical operators (AND, OR, NOT) [UNTESTED, 2015-03-05]
 
 ## Notes
 
@@ -34,7 +36,7 @@ These packages can be found and installed by using Anaconda 2.1.0.
 
 + The final objective is to realize _Random Feature Conceptor_ network, this network gives a biological plausible solution to realize conceptors.
 
-+ I was testing the conceptor network and this time, I used a 2-d signal instead of 1-d. The signal is made up by two sine waves that have different frequencies. Turns out the network output can almost match the first dimension, and it's failed to reconstruct the second dimension.
++ I was testing the conceptor network and this time, I used a 2-d signal instead of 1-d. The signal is made up by two sine waves that have different frequencies. Turns out the network output can almost match the first dimension, and it's failed to reconstruct the second dimension. (This problem is fixed, I mis-calculated one equation in the updating function).
 
 ## Contacts
 Yuhuang Hu  

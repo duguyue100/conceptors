@@ -6,8 +6,10 @@ Created on Feb 25, 2015
 '''
 
 import numpy as np;
-import conceptors.util;
 import numpy.matlib;
+
+import conceptors.util;
+import conceptors.logic as logic;
 
 class ConceptorNetwork:
   """
@@ -33,6 +35,7 @@ class ConceptorNetwork:
     """
     Initialize conceptor network
     
+    @param num_in: number of input neurons
     @param num_neuron: number of internal neurons  
     @param sr: spectral radius
     @param in_scale: scaling of pattern feeding weights
@@ -106,13 +109,13 @@ class ConceptorNetwork:
     x=np.zeros((self.num_neuron, 1));
     
     for n in xrange(self.washout_length+self.learn_length):
-      u=pattern[:,n];
+      u=pattern[:,n][None].T;
       x_old=x;
-      x=np.tanh(self.W_star.dot(x)+self.W_in*u+self.W_bias);
+      x=np.tanh(self.W_star.dot(x)+self.W_in.dot(u)+self.W_bias);
       if n>self.washout_length-1:
         x_collector[:, n-self.washout_length]=x[:,0];
         x_old_collector[:, n-self.washout_length]=x_old[:,0];
-        p_collector[:, n-self.washout_length]=u;
+        p_collector[:, n-self.washout_length]=u[:,0];
     
     x_collector_centered=x_collector-numpy.matlib.repmat(np.mean(x_collector, 1), self.learn_length, 1).T;
     # document centered collectors and collectors
@@ -260,15 +263,123 @@ class Autoconceptor:
   """
   
   def __init__(self,
-               num_neuron):
+               num_in,
+               num_neuron,
+               sr=1.5,
+               in_scale=1.5,
+               bias_scale=0.5,
+               washout_length=100,
+               learn_length=500,
+               signal_plot_length=20,
+               alpha=100,
+               tychonov_alpha_readout=0.01,
+               tychonov_alpha_readout_w=0.0001):
     """
-    comments
+    Initialize Autoconceptor Network
+    
+    @param num_in: number of input neurons
+    @param num_neuron: number of neurons in reservoir
+    @param sr: spectral radius
+    @param in_scale: scaling of pattern feeding weights
+    @param bias_scale: size of bias 
+    @param washout_length: length of wash-out iteration
+    @param learn_length: length of learning iteration
+    @param signal_plot_length: length of plot length
+    @param alpha: aperture
+    @param tychnonv_alpha_readout: Tychonov regularization parameter
     """
     
+    self.num_in=num_in;
+    self.num_neuron=num_neuron;
+    self.sr=sr;
+    self.in_scale=in_scale;
+    self.bias_scale=bias_scale;
+    self.learn_length=learn_length;
+    self.washout_length=washout_length;
+    self.signal_plot_length=signal_plot_length;
+    self.alpha=alpha;
+    self.tychonov_alpha_readout=tychonov_alpha_readout;
+    self.tychonov_alpha_readout_w=tychonov_alpha_readout_w;
     
-    pass
+    # initialize weights
+    W, W_in, bias=conceptors.util.init_weights(num_in,
+                                                 num_neuron,
+                                                 sr,
+                                                 in_scale,
+                                                 bias_scale);
+                                                      
+    self.W=W;
+    self.W_in=W_in;
+    self.bias=bias;
+    
+    self.p_templates=np.asarray([]);
+    self.all_train_args=np.asarray([]);
+    self.all_train_yt_args=np.asarray([]);
+    
+    # input simulation matrix
+    self.D=np.zeros((self.num_neuron, self.num_neuron));
+    
+    # conceptor matrix
+    self.C=np.zeros((self.num_neuron, self.num_neuron));
+    
+  def load_pattern(self,
+                   pattern):
+    """
+    Load single pattern
+    
+    @param pattern: input pattern in (N x time) size, each column is a sample
+    """
+    
+    p_template=np.zeros((self.learn_length, self.num_in));
+    x_cue=np.zeros((self.num_neuron, self.learn_length));
+    x_old_collector=np.zeros((self.num_neuron, self.learn_length));
+    #p_collector=np.zeros(())
+    x=np.zeros((self.num_neuron,1));
+    
+    for n in xrange(self.washout_length):
+      u=pattern[:,n][None].T;
+      x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
+    
+    for n in xrange(self.learn_length):
+      u=pattern[:,n+self.washout_length][None].T;
+      x_old=x;
+      x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
+      x_cue[:,n]=x[:,0];
+      x_old_collector[:,n]=x_old;
+      p_template[n,:]=u;
+      
     
     
+  def update_input_simulation_matrix(self,
+                                     p_template,
+                                     x_old_collector):
+    """
+    Incremental learning of input simulation matrix
+    
+    @param p_template: 
+    @param x_old_collector: 
+    """
+    
+    D_targs=self.W_in.dot(p_template.T)-self.D.dot(x_old_collector);
+    F=logic.NOT(self.C);
+    D_args=F.dot(x_old_collector);
+    D_inc=(np.linalg.pinv(D_args.dot(D_args.T)/self.learn_length+self.alpha**-2*np.eye(self.num_neuron)).dot(D_args).dot(D_targs.T)/self.learn_length).T;
+    
+    self.D+=D_inc;
+    
+  def update_conceptor(self,
+                       x_old_collector):
+    """
+    Incremental learning of conceptor
+    
+    @param x_old_collector: 
+    """
+    
+    R=x_old_collector.dot(x_old_collector.T)/(self.learn_length+1);
+    C_native=R.dot(np.linalg.inv(R+np.eye(self.num_neuron)));
+    C_ap=logic.PHI(C_native, self.alpha);
+    
+    self.C=logic.OR(self.C, C_ap);
     
 class RandomFeatureConceptor:
   """
@@ -280,6 +391,7 @@ class RandomFeatureConceptor:
   """
   
   def __init__(self,
+               num_in,
                num_neuron):
     """
     Write things

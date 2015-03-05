@@ -49,8 +49,8 @@ print y.shape
 print net.all_train_outs.shape
 
 pplot.figure(1);
-pplot.plot(xrange(1000), p[0][1,500:1500]);
-pplot.plot(xrange(1000), y[1,0:1000]);
+pplot.plot(xrange(1000), p[0][0,500:1500]);
+pplot.plot(xrange(1000), y[0,0:1000]);
 pplot.title("Redout")
 pplot.show();
 

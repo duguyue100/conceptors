@@ -3,4 +3,4 @@
 @note: Main implementation of conceptors
 """
 
-__all__=["util", "net"];
+__all__=["util", "net", "logic"];
