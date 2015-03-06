@@ -38,6 +38,8 @@ These packages can be found and installed by using Anaconda 2.1.0.
 
 + I was testing the conceptor network and this time, I used a 2-d signal instead of 1-d. The signal is made up by two sine waves that have different frequencies. Turns out the network output can almost match the first dimension, and it's failed to reconstruct the second dimension. (This problem is fixed, I mis-calculated one equation in the updating function).
 
++ The reconstruction of autoconceptor is not as expected.
+
 ## Contacts
 Yuhuang Hu  
 Advanced Robotic Lab  

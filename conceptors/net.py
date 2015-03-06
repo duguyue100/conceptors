@@ -299,10 +299,10 @@ class Autoconceptor:
     
     # initialize weights
     W, W_in, bias=conceptors.util.init_weights(num_in,
-                                                 num_neuron,
-                                                 sr,
-                                                 in_scale,
-                                                 bias_scale);
+                                               num_neuron,
+                                               sr,
+                                               in_scale,
+                                               bias_scale);
                                                       
     self.W=W;
     self.W_in=W_in;
@@ -333,7 +333,7 @@ class Autoconceptor:
     
     p_template=np.zeros((self.learn_length, self.num_in));
     x_cue=np.zeros((self.num_neuron, self.learn_length));
-    x_old_collector=np.zeros((self.num_neuron, self.learn_length));
+    x_old_cue=np.zeros((self.num_neuron, self.learn_length));
     #p_collector=np.zeros(())
     x=np.zeros((self.num_neuron,1));
     
@@ -343,10 +343,9 @@ class Autoconceptor:
     
     for n in xrange(self.learn_length):
       u=pattern[:,n+self.washout_length][None].T;
-      x_old=x;
+      x_old_cue[:,n]=x[:,0];
       x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
       x_cue[:,n]=x[:,0];
-      x_old_collector[:,n]=x_old[:,0];
       p_template[n,:]=u[:,0].T;
       
     if not self.p_templates.size:
@@ -360,9 +359,9 @@ class Autoconceptor:
       self.all_train_args=np.hstack((self.all_train_args, x_cue));
       
     if not self.all_train_old_args.size:
-      self.all_train_old_args=x_old_collector;
+      self.all_train_old_args=x_old_cue;
     else:
-      self.all_train_old_args=np.hstack((self.all_train_old_args, x_old_collector));
+      self.all_train_old_args=np.hstack((self.all_train_old_args, x_old_cue));
       
     if not self.all_train_dt_args.size:
       self.all_train_dt_args=self.W_in.dot(p_template.T);
@@ -370,13 +369,13 @@ class Autoconceptor:
       self.all_train_dt_args=np.hstack((self.all_train_dt_args, self.W_in.dot(p_template.T)));
       
     if not self.all_train_yt_args.size:
-      self.all_train_yt_args=p_template;
+      self.all_train_yt_args=p_template.T;
     else:
-      self.all_train_yt_args=np.hstack((self.all_train_yt_args, p_template));
+      self.all_train_yt_args=np.hstack((self.all_train_yt_args, p_template.T));
       
     if incremental==True:
-      self.update_input_simulation_matrix(p_template, x_old_collector);
-      self.update_conceptor(x_old_collector);
+      self.update_input_simulation_matrix(p_template, x_old_cue);
+      self.update_conceptor(x_old_cue);
       
   def load(self,
            patterns,
@@ -421,7 +420,7 @@ class Autoconceptor:
     
   def update_input_simulation_matrix(self,
                                      p_template,
-                                     x_old_collector):
+                                     x_old_cue):
     """
     Incremental learning of input simulation matrix
     
@@ -429,22 +428,22 @@ class Autoconceptor:
     @param x_old_collector: 
     """
     
-    D_targs=self.W_in.dot(p_template.T)-self.D.dot(x_old_collector);
+    D_targs=self.W_in.dot(p_template.T)-self.D.dot(x_old_cue);
     F=logic.NOT(self.C);
-    D_args=F.dot(x_old_collector);
+    D_args=F.dot(x_old_cue);
     D_inc=(np.linalg.pinv(D_args.dot(D_args.T)/self.learn_length+self.alpha**-2*np.eye(self.num_neuron)).dot(D_args).dot(D_targs.T)/self.learn_length).T;
     
     self.D+=D_inc;
     
   def update_conceptor(self,
-                       x_old_collector):
+                       x_old_cue):
     """
     Incremental learning of conceptor
     
-    @param x_old_collector: 
+    @param x_old_cue: 
     """
     
-    R=x_old_collector.dot(x_old_collector.T)/(self.learn_length+1);
+    R=x_old_cue.dot(x_old_cue.T)/(self.learn_length+1);
     C_native=R.dot(np.linalg.inv(R+np.eye(self.num_neuron)));
     C_ap=logic.PHI(C_native, self.alpha);
     
@@ -464,7 +463,7 @@ class Autoconceptor:
     @return next state of conceptor matrix
     """
     
-    return lambda_adapt*((x-C.dot(x)).dot(x.T)-self.alpha**-2*C);
+    return lambda_adapt*((x-C.dot(x)).dot(x.T)-(self.alpha**-2)*C);
     
   def cue_conceptor(self,
                     pattern,
@@ -493,7 +492,7 @@ class Autoconceptor:
       x=np.tanh(self.W.dot(x)+self.W_in.dot(u)+self.bias);
       C+=self.adapt_conceptor(C, x, lambda_adapt_cue);
     
-    return C;
+    return C, x;
   
   def recall_conceptor(self,
                        C,
@@ -514,7 +513,7 @@ class Autoconceptor:
       x=C.dot(np.tanh(self.W.dot(x)+self.D.dot(x)+self.bias));
       C+=self.adapt_conceptor(C, x, lambda_adapt_recall);
       
-    return C;
+    return C, x;
   
   def offline_recall(self,
                      C,
@@ -526,7 +525,9 @@ class Autoconceptor:
     @param x: activation state
     """
     
-    return C.dot(np.tanh(self.W.dot(x)+self.D.dot(x)+self.bias));
+    r=np.tanh(self.W.dot(x)+self.D.dot(x)+self.bias);
+    
+    return C.dot(r), r;
   
   def offline_pattern_recall(self,
                              C,
@@ -538,8 +539,9 @@ class Autoconceptor:
     @param x: activation state 
     """
     
-    x=self.offline_pattern_recall(C, x);
-    return self.W_out.dot(x);
+    x, r=self.offline_recall(C, x);
+    
+    return self.W_out.dot(r), x;
     
 class RandomFeatureConceptor:
   """
