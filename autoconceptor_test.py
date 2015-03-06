@@ -42,16 +42,16 @@ print "Autoconceptors are trained"
 
 measure_washout=50;
 measure_rl=500;
-x=x1;
+x=x2;
 x_before=x;
 
 y1=np.zeros((measure_rl,1));
 for n in xrange(measure_washout):
-  x=c1.dot(np.tanh(net.W.dot(x)+net.W_in.dot(p1[n+130])+net.bias));
+  x=c2.dot(np.tanh(net.W.dot(x)+net.W_in.dot(p2[n+130])+net.bias));
   
 for n in xrange(measure_rl):
-  r=np.tanh(net.W.dot(x)+net.W_in.dot(p1[n+180])+net.bias)
-  x=c1.dot(r);
+  r=np.tanh(net.W.dot(x)+net.W_in.dot(p2[n+180])+net.bias)
+  x=c2.dot(r);
   y1[n,:]=net.W_out.dot(r);
   
 pplot.figure(3);

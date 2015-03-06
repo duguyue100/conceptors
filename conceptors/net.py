@@ -554,18 +554,163 @@ class RandomFeatureConceptor:
   
   def __init__(self,
                num_in,
-               num_neuron):
+               num_neuron,
+               num_feature,
+               sr=1.4,
+               in_scale=1.2,
+               bias_scale=0.2,
+               washout_length=200,
+               learn_length=400,
+               c_adapt_length=2000,
+               signal_plot_length=20,
+               alpha=8,
+               tychonov_alpha_readout=1,
+               tychonov_alpha_g=0.01):
     """
-    Write things
+    Initialize a Random Feature Conceptor network
+    
+    @param num_in: number of input neurons
+    @param num_neuron: number of neurons in reservoir
+    @param num_feature: number of neurons in feature space
+    @param sr: spectral radius
+    @param in_scale: scaling of pattern feeding weights
+    @param bias_scale: size of bias
     """
   
-    pass
+    self.num_in=num_in;
+    self.num_neuron=num_neuron;
+    self.num_feature=num_feature;
+    self.sr=sr;
+    self.in_scale=in_scale;
+    self.bias_scale=bias_scale;
+    self.washout_length=washout_length;
+    self.learn_length=learn_length;
+    self.c_adapt_length=c_adapt_length;
+    self.signal_plot_length=signal_plot_length;
+    self.alpha=alpha;
+    self.tychonov_alpha_readout=tychonov_alpha_readout;
+    self.tychonov_alpha_g=tychonov_alpha_g;
+    
+    # initialize weights
+    
+    _, W_in, bias=conceptors.util.init_weights(num_in,
+                                               num_neuron,
+                                               sr,
+                                               in_scale,
+                                               bias_scale);
+    self.W_in=W_in;
+    self.bias=bias;
+    self.W_out=np.asarray([]);
+    
+    F_raw=np.random.rand(num_feature, num_neuron);
+    G_star_raw=np.random.rand(num_neuron, num_feature);
+    GF=G_star_raw.dot(F_raw);
+    SR=np.max(np.abs(np.linalg.eigvals(GF)));
+    F_raw/=np.sqrt(SR);
+    G_star_raw/=np.sqrt(SR);
+    
+    self.F=F_raw*np.sqrt(sr);
+    self.G_star=G_star_raw*np.sqrt(sr);
+    self.G=np.asarray([]);
+    
+    self.all_train_r=np.asarray([]);
+    self.all_train_cz_old=np.asarray([]);
+    self.all_train_p=np.asarray([]);
+    self.all_train_t=np.asarray([]);
+    
+    # collectors
+    
+    self.c_collectors=[];
+    self.Cs=[];
+    self.train_rpl=[];
+    self.train_ppl=[];
+    
+  def load(self,
+           pattern):
+    """
+    Load a pattern
+    
+    @param pattern: a pattern to be loaded, each column is a sample
+    """
 
+    r_collector=np.zeros((self.num_neuron, self.learn_length));
+    cz_old_collector=np.zeros((self.num_feature, self.learn_length));
+    p_collector=np.zeros((self.num_in, self.learn_length));
+    c_collector=np.zeros((self.num_feature, self.c_adapt_length));
+    t_collector=np.zeros((self.num_neuron, self.learn_length));
     
+    z=np.zeros((self.num_feature, 1));
+    c=np.ones((self.num_feature, 1));
+    cz=np.zeros((self.num_feature, 1));
     
+    for n in xrange(self.washout_length+self.c_adapt_length+self.learn_length):
+      u=pattern[:,n][None].T;
+      cz_old=cz;
+      t=self.G_star.dot(cz)+self.W_in.dot(u);
+      r=np.tanh(t+self.bias);
+      z=self.F.dot(r);
+      cz=c*z;
+      
+      if (n<=self.c_adapt_length+self.washout_length-1 and n>self.washout_length-1):
+        c=c+self.update_conception(c, cz);
+        c_collector[:,n-self.washout_length]=c;
+        
+      if n==self.c_adapt_length+self.washout_length-1:
+        self.Cs.append(c);
+      
+      if n>self.c_adapt_length+self.washout_length-1:
+        r_collector[:, n-self.washout_length-self.c_adapt_length]=r;
+        cz_old_collector[:, n-self.washout_length-self.c_adapt_length]=cz_old;
+        p_collector[:, n-self.washout_length-self.c_adapt_length]=u;
+        t_collector[:, n-self.washout_length-self.c_adapt_length]=t;
+        
+    self.c_collectors.append(c_collector);
+    self.train_rpl.append(r_collector[0:5, 0:self.signal_plot_length]);
+    self.train_ppl.append(p_collector[:, 0:self.signal_plot_length]);
     
+    if not self.all_train_r.size:
+      self.all_train_r=r_collector;
+    else:
+      self.all_train_r=np.hstack((self.all_train_r, r_collector));
+      
+    if not self.all_train_cz_old.size:
+      self.all_train_cz_old=cz_old_collector;
+    else:
+      self.all_train_cz_old=np.hstack((self.all_train_cz_old, cz_old_collector));
+      
+    if not self.all_train_p.size:
+      self.all_train_p=p_collector;
+    else:
+      self.all_train_p=np.hstack((self.all_train_p, p_collector));
+      
+    if not self.all_train_t.size:
+      self.all_train_t=t_collector;
+    else:
+      self.all_train_t=np.hstack((self.all_train_t, t_collector));
     
+  def update_conception(self,
+                        c,
+                        cz,
+                        lambda_conception=0.5):
+    """
+    Update conception vector
+    """
     
+    return lambda_conception*((cz-c*cz)*cz-self.alpha**-2*c);
     
+  def compute_readout_weights(self,
+                              tychonov_alpha_readout=1):
+    """
+    Compute readout weights
+    """
     
+    self.W_out=np.linalg.inv(self.all_train_r.dot(self.all_train_r.T)+tychonov_alpha_readout*np.eye(self.num_neuron)).dot(self.all_train_r).dot(self.all_train_p.T).T;
     
+  def compute_backprojection_weights(self,
+                                     tychonov_alpha_g=0.01):
+    """
+    Compute backprojection weights
+    """
+    
+    self.G=np.linalg.inv(self.all_train_cz_old.dot(self.all_train_cz_old.T)+tychonov_alpha_g*np.eye(self.num_feature)).dot(self.all_train_cz_old).dot(self.all_train_t.T).T;
+  
