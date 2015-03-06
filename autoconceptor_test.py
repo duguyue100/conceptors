@@ -47,12 +47,16 @@ x_before=x;
 
 y1=np.zeros((measure_rl,1));
 for n in xrange(measure_washout):
-  x=c1.dot(np.tanh(net.W.dot(x)+net.D.dot(x)+net.bias));
+  x=c1.dot(np.tanh(net.W.dot(x)+net.W_in.dot(p1[n+130])+net.bias));
   
 for n in xrange(measure_rl):
-  r=np.tanh(net.W.dot(x)+net.D.dot(x)+net.bias)
+  r=np.tanh(net.W.dot(x)+net.W_in.dot(p1[n+180])+net.bias)
   x=c1.dot(r);
   y1[n,:]=net.W_out.dot(r);
+  
+pplot.figure(3);
+pplot.plot(xrange(measure_rl), y1);
+pplot.show();
   
 x=x_before;
 
@@ -84,9 +88,9 @@ phase_matches=np.zeros((1,L-M));
 for phase_shift in xrange(L-M):
   phase_matches[0, phase_shift]=np.linalg.norm(this_driver_int-this_out_int[phase_shift:phase_shift+M]);
   
-maxInd=np.argmax(-phase_matches);
+maxInd=np.argmin(phase_matches);
 
-p_aligned=this_out_int[maxInd:maxInd+M];
+p_aligned=this_out_int[maxInd+1:maxInd+M+1];
 
 print this_driver_int.shape
 print p_aligned.shape
@@ -95,11 +99,3 @@ pplot.figure(1);
 pplot.plot(xrange(20), this_driver_int);
 pplot.plot(xrange(20), p_aligned);
 pplot.show();
-
-y=net.W_out.dot(net.all_train_args)[0, 0:500];
-print y.shape
-
-pplot.figure(2);
-pplot.plot(xrange(500), y[0:500]);
-pplot.show();
-
