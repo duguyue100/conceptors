@@ -119,7 +119,7 @@ def classify_experiment(filename_train,
       C_pos_class, C_neg_class, R, R_other=network.compute_conceptor(all_train_states[:, start_idx:end_idx],
                                                                      ap_N,
                                                                      R_all,
-                                                                     (num_classes-1)*(end_idx-start_idx));
+                                                                     (num_train-(end_idx-start_idx)));
     
       C_poss.append(C_pos_class);
       C_negs.append(C_neg_class);
@@ -134,6 +134,7 @@ def classify_experiment(filename_train,
                                                                   C_negs[i],
                                                                   ap_N,
                                                                   num_inter_samples);
+    
     best_ap_pos=np.mean(best_aps_poss);
     best_ap_neg=np.mean(best_aps_negs);                       
     
@@ -173,7 +174,7 @@ def classify_experiment(filename_train,
     
     accuracy=float(np.sum(output_label==test_label))/float(num_test);
     
-    print "[MESSAGE] Accuracy %.2f" % accuracy*100;
+    print "[MESSAGE] Accuracy %.2f %%" % (accuracy*100);
     
     end_time=time.clock();
     print "[MESSAGE] Total for %.2fm" % ((end_time-start_time)/60);

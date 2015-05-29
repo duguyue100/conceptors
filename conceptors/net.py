@@ -102,11 +102,25 @@ class ConceptorNetwork:
     @param patterns: Class of patterns
     """
     
-    x=np.random.rand(self.num_neuron,
-                     patterns.shape[1]);
-    x=np.tanh(self.W_star.dot(x)+self.W_in.dot(patterns)+self.W_bias);
+    x=np.random.rand(self.num_neuron, 1);
+     
+    hid_states=np.array([]);
+    for i in xrange(patterns.shape[1]):
+      x=np.tanh(self.W_star.dot(x)+self.W_in.dot(patterns[:,i][None].T)+self.W_bias);
+       
+      x_seq=np.vstack((x, patterns[:,i][None].T));
+      if not hid_states.size:
+        hid_states=x_seq;
+      else:
+        hid_states=np.hstack((hid_states, x_seq));
     
-    return np.vstack((x, patterns));
+    return hid_states;
+     
+#     x=np.random.rand(self.num_neuron,
+#                      patterns.shape[1]);
+#     x=np.tanh(self.W_star.dot(x)+self.W_in.dot(patterns)+self.W_bias);
+#     
+#     return np.vstack((x, patterns));
   
   def compute_conceptor(self,
                         train_states,
@@ -148,7 +162,7 @@ class ConceptorNetwork:
     norm_neg=np.zeros(ap_N);
     for ap_i in xrange(ap_N):
       norm_pos[ap_i]=np.linalg.norm(C_pos_class[ap_i], 'fro')**2;
-      norm_neg[ap_i]=np.linalg.norm(C_neg_class[ap_i], 'fro')**2;
+      norm_neg[ap_i]=np.linalg.norm(self.I-C_neg_class[ap_i], 'fro')**2;
       
     f_pos=scipy.interpolate.interp1d(np.arange(ap_N), norm_pos, kind="cubic");
     x_new=np.linspace(0, ap_N-1, num_inter_samples+1);
@@ -157,10 +171,10 @@ class ConceptorNetwork:
     norm_neg_inter=f_neg(x_new);
     
     norm_pos_inter_grad=(norm_pos_inter[1:]-norm_pos_inter[0:-1])/0.01;
-    norm_pos_inter_grad=np.hstack((norm_pos_inter_grad, norm_pos_inter[-1]));
+    #norm_pos_inter_grad=np.hstack((norm_pos_inter_grad, norm_pos_inter_grad[-1]));
     
     norm_neg_inter_grad=(norm_neg_inter[1:]-norm_neg_inter[0:-1])/0.01;
-    norm_neg_inter_grad=np.hstack((norm_neg_inter_grad, norm_pos_inter[-1]));
+    #norm_neg_inter_grad=np.hstack((norm_neg_inter_grad, norm_neg_inter_grad[-1]));
     
     max_ind_pos=np.argmax(np.abs(norm_pos_inter_grad));
     max_ind_neg=np.argmax(np.abs(norm_neg_inter_grad));
