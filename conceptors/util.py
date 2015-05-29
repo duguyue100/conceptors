@@ -76,10 +76,33 @@ def nrmse(output,
     
   return np.mean(np.sqrt(np.mean(error_signal**2, 1)/combined_var));
 
+def parse_arlab_feature(train_data,
+                        test_data):
+  """
+  Parse ARLAB feature
+  
+  @param train_data: training data
+  @param test_data: testing data
+  """
 
+  train_input=train_data[:,1:];
+  train_label=train_data[:,0];
+  test_input=test_data[:,1:];
+  test_label=test_data[:,0];
+  
+  return train_input, train_label, test_input, test_label;
 
+def normalize_arlab_feature(train_input,
+                            test_input):
+  """
+  Normalize ARLAB feature
+  
+  @param train_input: train data input
+  @param test_input: test data input
+  """
 
-
-
-
-
+  train_input_mean=np.mean(train_input, axis=0);
+  train_input=train_input-train_input_mean;
+  test_input=test_input-train_input_mean;
+  
+  return train_input, test_input;

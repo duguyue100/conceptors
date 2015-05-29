@@ -4,5 +4,7 @@
 	"save_path": "../data/mnist_convnet_feature_200_result.csv",
 	"range_start": 5,
 	"range_end": 500,
-	"range_step": 5
+	"range_step": 5,
+	"ap_N": 10,
+	"num_inter_samples": 900
 }

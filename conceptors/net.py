@@ -7,6 +7,7 @@ Created on Feb 25, 2015
 
 import numpy as np;
 import numpy.matlib;
+import scipy.interpolate;
 
 import conceptors.util;
 import conceptors.logic as logic;
@@ -77,6 +78,7 @@ class ConceptorNetwork:
     self.all_train_old_args=np.asarray([]);
     self.all_train_targs=np.asarray([]);
     self.all_train_outs=np.asarray([]);
+    self.I=np.eye(self.num_neuron+self.num_in);
     
     # initialize collectors
     
@@ -94,7 +96,96 @@ class ConceptorNetwork:
     
     self.Cs=[]; self.Cs.append([]); self.Cs.append([]); self.Cs.append([]); self.Cs.append([]);
     
+  def drive_class(self,
+                  patterns):
+    """
+    @param patterns: Class of patterns
+    """
     
+    x=np.random.rand(self.num_neuron,
+                     patterns.shape[1]);
+    x=np.tanh(self.W_star.dot(x)+self.W_in.dot(patterns)+self.W_bias);
+    
+    return np.vstack((x, patterns));
+  
+  def compute_conceptor(self,
+                        train_states,
+                        ap_N,
+                        R_all,
+                        norm_size):
+    """
+    @param train_states: a class of training state
+    @param R_all: Correlation matrix for all training states
+    @param norm_size: norm size for R_orther_norm;
+    """
+    
+    R=train_states.dot(train_states.T);
+    R_norm=R/float(train_states.shape[1]);
+    R_other=R_all-R;
+    R_other_norm=R_other/(float(norm_size));
+    
+    C_pos_class=[];
+    C_neg_class=[];
+    
+    for ap_i in xrange(ap_N):
+      C_pos_class.append(R_norm.dot(np.linalg.inv(R_norm+(2**float(ap_i))**(-2)*self.I)));
+      C_other=R_other_norm.dot(np.linalg.inv(R_other_norm+(2**float(ap_i))**(-2)*self.I));
+      C_neg_class.append(self.I-C_other);
+      
+    return C_pos_class, C_neg_class, R, R_other;
+  
+  def compute_aperture(self,
+                       C_pos_class,
+                       C_neg_class,
+                       ap_N,
+                       num_inter_samples):
+    """
+    @param C_pos_class: a class of positive conceptors
+    @param C_neg_class: a class of negative conceptors 
+    """
+    
+    norm_pos=np.zeros(ap_N);
+    norm_neg=np.zeros(ap_N);
+    for ap_i in xrange(ap_N):
+      norm_pos[ap_i]=np.linalg.norm(C_pos_class[ap_i], 'fro')**2;
+      norm_neg[ap_i]=np.linalg.norm(C_neg_class[ap_i], 'fro')**2;
+      
+    f_pos=scipy.interpolate.interp1d(np.arange(ap_N), norm_pos, kind="cubic");
+    x_new=np.linspace(0, ap_N-1, num_inter_samples+1);
+    f_neg=scipy.interpolate.interp1d(np.arange(ap_N), norm_neg, kind="cubic");
+    norm_pos_inter=f_pos(x_new);
+    norm_neg_inter=f_neg(x_new);
+    
+    norm_pos_inter_grad=(norm_pos_inter[1:]-norm_pos_inter[0:-1])/0.01;
+    norm_pos_inter_grad=np.hstack((norm_pos_inter_grad, norm_pos_inter[-1]));
+    
+    norm_neg_inter_grad=(norm_neg_inter[1:]-norm_neg_inter[0:-1])/0.01;
+    norm_neg_inter_grad=np.hstack((norm_neg_inter_grad, norm_pos_inter[-1]));
+    
+    max_ind_pos=np.argmax(np.abs(norm_pos_inter_grad));
+    max_ind_neg=np.argmax(np.abs(norm_neg_inter_grad));
+    
+    best_aps_pos=2**x_new[max_ind_pos];
+    best_aps_neg=2**x_new[max_ind_neg];
+    
+    return best_aps_pos, best_aps_neg;
+  
+  def compute_best_conceptor(self,
+                             R,
+                             R_other,
+                             best_ap_pos,
+                             best_ap_neg,
+                             norm_size,
+                             norm_others_size):
+    R_norm=R/float(norm_size);
+    R_other_norm=R_other/float(norm_others_size);
+    
+    c_pos_best=R_norm.dot(np.linalg.inv(R_norm + best_ap_pos ** (-2) * self.I));
+    C_other=R_other_norm.dot(np.linalg.inv(R_other_norm + best_ap_neg ** (-2) * self.I));
+    c_neg_best=self.I-C_other;
+      
+    return c_pos_best, c_neg_best;
+      
   def train_pattern(self,
                     pattern):
     """
