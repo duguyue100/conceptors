@@ -71,13 +71,13 @@ def classify_experiment(filename_train,
   print "[MESSAGE] Data is prepared.";
   
   for trail in xrange(len(neuron_range)):
-    print "[MESSAGE] Trail %d" % (trail+1);
     start_time=time.clock();
     
     ## parameter settings
     save_file=open(save_path, "a+");
     num_in=train_input.shape[0];
     num_neuron=neuron_range[trail];
+    print "[MESSAGE] Trail %d --- Number of Neuron: %d" % ((trail+1), num_neuron);
     
     ## create network
     network=net.ConceptorNetwork(num_in=num_in,
@@ -172,9 +172,18 @@ def classify_experiment(filename_train,
     
     output_label=np.argmax(comb_ev, axis=0);
     
+    pos_out_label=np.argmax(pos_ev, axis=0);
+    neg_out_label=np.argmax(neg_ev, axis=0);
+    
     accuracy=float(np.sum(output_label==test_label))/float(num_test);
+    pos_accuracy=float(np.sum(pos_out_label==test_label))/float(num_test);
+    neg_accuracy=float(np.sum(neg_out_label==test_label))/float(num_test);
     
     print "[MESSAGE] Accuracy %.2f %%" % (accuracy*100);
     
     end_time=time.clock();
     print "[MESSAGE] Total for %.2fm" % ((end_time-start_time)/60);
+    
+    info=np.column_stack((num_neuron, best_ap_pos, best_ap_pos, accuracy, pos_accuracy, neg_accuracy, ((end_time-start_time)/60)));
+    np.savetxt(save_file, info, delimiter=',',newline='\n');
+    save_file.close();
