@@ -1,0 +1,8 @@
+{
+	"filename_train": "../data/mnist_convnet_feature_200/mnist_train_convnet_feature_200_ordered.pkl",
+	"filename_test": "../data/mnist_convnet_feature_200/mnist_test_convnet_feature_200_ordered.pkl",
+	"save_path": "../data/mnist_convnet_feature_200_result.csv",
+	"range_start": 5,
+	"range_end": 500,
+	"range_step": 5
+}

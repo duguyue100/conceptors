@@ -3,4 +3,7 @@
 @note: Main implementation of conceptors
 """
 
-__all__=["util", "net", "logic"];
+__all__=["util",
+         "net",
+         "logic",
+         "dataset"];

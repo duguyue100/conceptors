@@ -8,9 +8,9 @@ import scipy.interpolate;
 import matplotlib.pyplot as pplot;
 import conceptors.util as util;
 from conceptors.net import ConceptorNetwork;
-from conceptors.util import read_jpv_data;
-from conceptors.util import normalize_jap_data;
-from conceptors.util import transform_jap_data;
+from conceptors.dataset import read_jpv_data;
+from conceptors.dataset import normalize_jap_data;
+from conceptors.dataset import transform_jap_data;
 
 train_inputs, train_outputs, test_inputs, test_outputs=read_jpv_data("/home/arlmaster/workspace/conceptors/conceptors/data/ae.train",
                                                                      "/home/arlmaster/workspace/conceptors/conceptors/data/ae.test");
