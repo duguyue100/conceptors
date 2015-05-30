@@ -1,0 +1,10 @@
+{
+	"filename_train": "../data/mnist_ae_feature_500/mnist_train_ae_feature_500_ordered.pkl",
+	"filename_test": "../data/mnist_ae_feature_500/mnist_test_ae_feature_500_ordered.pkl",
+	"save_path": "../data/mnist_ae_feature_500_result.csv",
+	"range_start": 5,
+	"range_end": 500,
+	"range_step": 5,
+	"ap_N": 10,
+	"num_inter_samples": 900
+}

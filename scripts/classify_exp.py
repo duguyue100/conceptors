@@ -187,3 +187,10 @@ def classify_experiment(filename_train,
     info=np.column_stack((num_neuron, best_ap_pos, best_ap_pos, accuracy, pos_accuracy, neg_accuracy, ((end_time-start_time)/60)));
     np.savetxt(save_file, info, delimiter=',',newline='\n');
     save_file.close();
+    
+    ## remove variable
+    
+    del output_label; del pos_out_label; del neg_out_label;
+    del pos_ev; del neg_ev; del comb_ev;
+    del xTx;
+    del network;
