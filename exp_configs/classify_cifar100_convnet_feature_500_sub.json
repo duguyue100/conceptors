@@ -1,0 +1,10 @@
+{
+	"filename_train": "../data/cifar100_convnet_feature_500_sub/cifar100_train_convnet_feature_500_sub_ordered.pkl",
+	"filename_test": "../data/cifar100_convnet_feature_500_sub/cifar100_test_convnet_feature_500_sub_ordered.pkl",
+	"save_path": "../data/cifar100_convnet_feature_500_sub_result.csv",
+	"range_start": 5,
+	"range_end": 500,
+	"range_step": 5,
+	"ap_N": 10,
+	"num_inter_samples": 900
+}
