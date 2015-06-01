@@ -1,0 +1,7 @@
+{
+	"filename_train": "../data/cifar100_convnet_feature_500_sub/cifar100_train_convnet_feature_500_sub_ordered.pkl",
+	"filename_test": "../data/cifar100_convnet_feature_500_sub/cifar100_test_convnet_feature_500_sub_ordered.pkl",
+	"save_path": "../data/inc_learn_cifar100_convnet_feature_500_sub_result.csv",
+	"num_neuron": 20,
+    "ap_pos": 2.069948661555389258
+}

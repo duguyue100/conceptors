@@ -199,6 +199,15 @@ class ConceptorNetwork:
     c_neg_best=self.I-C_other;
       
     return c_pos_best, c_neg_best;
+  
+  def compute_pos_conceptor(self,
+                            R,
+                            ap_pos,
+                            norm_size):
+    R_norm=R/float(norm_size);
+    c_pos=R_norm.dot(np.linalg.inv(R_norm + ap_pos ** (-2) * self.I));
+    
+    return c_pos;
       
   def train_pattern(self,
                     pattern):
