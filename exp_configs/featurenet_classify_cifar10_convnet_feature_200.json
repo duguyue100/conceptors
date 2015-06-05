@@ -1,0 +1,7 @@
+{
+	"filename_train": "../data/cifar10_convnet_feature_200/cifar10_train_convnet_feature_200_ordered.pkl",
+	"filename_test": "../data/cifar10_convnet_feature_200/cifar10_test_convnet_feature_200_ordered.pkl",
+	"save_path": "../data/featurenet_cifar10_convnet_feature_200_result.csv",
+	"ap_N": 10,
+	"num_inter_samples": 900
+}

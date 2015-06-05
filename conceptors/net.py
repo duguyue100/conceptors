@@ -79,6 +79,7 @@ class ConceptorNetwork:
     self.all_train_targs=np.asarray([]);
     self.all_train_outs=np.asarray([]);
     self.I=np.eye(self.num_neuron+self.num_in);
+    self.I=np.eye(self.num_in);
     
     # initialize collectors
     
@@ -109,6 +110,7 @@ class ConceptorNetwork:
       x=np.tanh(self.W_star.dot(x)+self.W_in.dot(patterns[:,i][None].T)+self.W_bias);
        
       x_seq=np.vstack((x, patterns[:,i][None].T));
+      x_seq=patterns[:,i][None].T;
       if not hid_states.size:
         hid_states=x_seq;
       else:

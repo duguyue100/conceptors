@@ -6,4 +6,5 @@
 __all__=("util",
          "net",
          "logic",
-         "dataset");
+         "dataset",
+         "feature_net");
