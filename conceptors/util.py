@@ -87,6 +87,8 @@ def parse_arlab_feature(train_data,
 
   train_input=train_data[:,1:];
   train_label=train_data[:,0];
+  
+  np.random.shuffle(test_data);
   test_input=test_data[:,1:];
   test_label=test_data[:,0];
   

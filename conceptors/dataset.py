@@ -252,7 +252,7 @@ def load_arlab_feature(filename_train,
   
   ## check integrity (simple)
   
-  if (np.max(train_data[:,0])!=np.max(test_data[:,0])):
-    raise ValueError("number of train classes: %d, number of test classes: %d. They are not matched" % (np.max(train_data[:,0]), np.max(test_data[:,0])));
+  #if (np.max(train_data[:,0])!=np.max(test_data[:,0])):
+  #  raise ValueError("number of train classes: %d, number of test classes: %d. They are not matched" % (np.max(train_data[:,0]), np.max(test_data[:,0])));
   
   return train_data, test_data;

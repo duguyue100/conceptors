@@ -115,3 +115,33 @@ def PHI(C, gamma):
     C_new=C.dot(np.linalg.inv(C+gamma**-2*(np.eye(dim)-C)));
     
   return C_new;
+
+def conceptor_NOT(C):
+  """
+  Logic NOT
+  
+  @param C: a conceptor
+  """
+  
+  return np.eye(C.shape[0])-C;
+
+def conceptor_AND(C, B):
+  """
+  Logic AND, compute C and B
+  
+  @param C: a conceptor
+  @param B: a conceptor
+  """
+  
+  return np.linalg.inv(np.linalg.inv(C)+np.linalg.inv(B)-np.eye(C.shape[0]));
+  
+def conceptor_OR(C, B):
+  """
+  Logic OR, compute C or B
+  
+  @param C: a conceptor
+  @param B: a conceptor
+  """
+  
+  #return np.linalg.inv(I+np.linalg.inv(C.dot(np.linalg.inv(I-C))+B.dot(np.linalg.inv(I-B))));
+  return conceptor_NOT(conceptor_AND(conceptor_NOT(C), conceptor_NOT(B)));

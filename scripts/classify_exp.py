@@ -62,11 +62,12 @@ def classify_experiment(filename_train,
   
   train_input, train_label, test_input, test_label=util.parse_arlab_feature(train_data, test_data);
   
+  print test_label[0:100];
   train_input, test_input=util.normalize_arlab_feature(train_input, test_input);
   train_input=train_input.T;
   test_input=test_input.T;
   _, tr_start_idx=np.unique(train_label, return_index=True);
-  _, te_start_idx=np.unique(test_label, return_index=True);
+  #_, te_start_idx=np.unique(test_label, return_index=True);
   
   print "[MESSAGE] Data is prepared.";
   
